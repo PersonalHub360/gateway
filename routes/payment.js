@@ -6,7 +6,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const User = require('../models/User');
-const { auth, requireVerification } = require('../middleware/auth');
+const { auth, requireFullVerification } = require('../middleware/auth');
 const { encryptTransactionData } = require('../utils/encryption');
 const { formatCurrency, validateCurrencyAmount, calculateTransactionFee } = require('../utils/currency');
 const { createOTP, verifyOTP } = require('../utils/otp');
@@ -86,7 +86,7 @@ router.get('/providers', [
 // Electricity Bill Payment
 router.post('/electricity', [
   auth,
-  requireVerification,
+  requireFullVerification,
   billPaymentRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('providerId').notEmpty().withMessage('Provider ID is required'),
@@ -259,7 +259,7 @@ router.post('/electricity', [
 // Water Bill Payment
 router.post('/water', [
   auth,
-  requireVerification,
+  requireFullVerification,
   billPaymentRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('providerId').notEmpty().withMessage('Provider ID is required'),
@@ -299,7 +299,7 @@ router.post('/water', [
 // Mobile Top-up
 router.post('/mobile-topup', [
   auth,
-  requireVerification,
+  requireFullVerification,
   paymentRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('operator').notEmpty().withMessage('Mobile operator is required'),
@@ -470,7 +470,7 @@ router.post('/mobile-topup', [
 // Shop Payment (POS Integration)
 router.post('/shop', [
   auth,
-  requireVerification,
+  requireFullVerification,
   paymentRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('merchantCode').notEmpty().withMessage('Merchant code is required'),
@@ -644,7 +644,7 @@ router.post('/shop', [
 // Government Bill Payment
 router.post('/government', [
   auth,
-  requireVerification,
+  requireFullVerification,
   billPaymentRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('serviceType').isIn(['tax', 'passport', 'visa', 'license', 'fine']).withMessage('Invalid service type'),

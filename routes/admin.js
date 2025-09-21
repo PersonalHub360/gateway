@@ -6,7 +6,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
-const { auth, requireAdmin } = require('../middleware/auth');
+const { auth, adminAuth } = require('../middleware/auth');
 const { encryptUserData, decryptUserData } = require('../utils/encryption');
 const { formatCurrency } = require('../utils/currency');
 const { sendEmail } = require('../utils/email');
@@ -22,7 +22,7 @@ const adminRateLimit = rateLimit({
 // Dashboard Statistics
 router.get('/dashboard', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit
 ], async (req, res) => {
   try {
@@ -235,7 +235,7 @@ router.get('/dashboard', [
 // Get all users with pagination and filters
 router.get('/users', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
@@ -311,7 +311,7 @@ router.get('/users', [
 // Get specific user details
 router.get('/users/:userId', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   param('userId').isMongoId().withMessage('Invalid user ID')
 ], async (req, res) => {
@@ -410,7 +410,7 @@ router.get('/users/:userId', [
 // Update user status
 router.patch('/users/:userId/status', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   param('userId').isMongoId().withMessage('Invalid user ID'),
   body('status').isIn(['active', 'inactive', 'suspended']).withMessage('Invalid status'),
@@ -493,7 +493,7 @@ router.patch('/users/:userId/status', [
 // Approve/Reject KYC
 router.patch('/users/:userId/kyc', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   param('userId').isMongoId().withMessage('Invalid user ID'),
   body('action').isIn(['approve', 'reject']).withMessage('Action must be approve or reject'),
@@ -560,7 +560,7 @@ router.patch('/users/:userId/kyc', [
 // Get all transactions with advanced filtering
 router.get('/transactions', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
@@ -675,7 +675,7 @@ router.get('/transactions', [
 // System settings
 router.get('/settings', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit
 ], async (req, res) => {
   try {
@@ -732,7 +732,7 @@ router.get('/settings', [
 // Export data
 router.get('/export/:type', [
   auth,
-  requireAdmin,
+  adminAuth,
   adminRateLimit,
   param('type').isIn(['users', 'transactions', 'wallets']).withMessage('Invalid export type'),
   query('format').optional().isIn(['csv', 'json']).withMessage('Invalid format'),

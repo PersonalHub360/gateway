@@ -6,7 +6,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const User = require('../models/User');
-const { auth, requireVerification, requireAdmin } = require('../middleware/auth');
+const { auth, requireFullVerification, adminAuth } = require('../middleware/auth');
 const { encryptTransactionData, decryptTransactionData } = require('../utils/encryption');
 const { convertCurrency, formatCurrency, validateCurrencyAmount, calculateTransactionFee } = require('../utils/currency');
 const { createOTP, verifyOTP } = require('../utils/otp');
@@ -171,7 +171,7 @@ router.get('/:transactionId', [
 // Cash In - Auto Merchant
 router.post('/cash-in/auto', [
   auth,
-  requireVerification,
+  requireFullVerification,
   cashInRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
@@ -352,7 +352,7 @@ router.post('/cash-in/auto', [
 // Cash In - Manual
 router.post('/cash-in/manual', [
   auth,
-  requireVerification,
+  requireFullVerification,
   cashInRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
@@ -526,7 +526,7 @@ router.post('/cash-in/manual', [
 // Cash Out - Auto
 router.post('/cash-out/auto', [
   auth,
-  requireVerification,
+  requireFullVerification,
   cashOutRateLimit,
   body('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
@@ -685,7 +685,7 @@ router.post('/cash-out/auto', [
 // Approve/Reject Manual Transaction (Admin only)
 router.patch('/:transactionId/approve', [
   auth,
-  requireAdmin,
+  adminAuth,
   transactionRateLimit,
   param('transactionId').isMongoId().withMessage('Invalid transaction ID'),
   body('action').isIn(['approve', 'reject']).withMessage('Action must be approve or reject'),

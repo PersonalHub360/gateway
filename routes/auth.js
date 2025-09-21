@@ -11,7 +11,7 @@ const Wallet = require('../models/Wallet');
 const { sendEmail } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { generateOTP } = require('../utils/otp');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -364,7 +364,7 @@ router.post('/verify-2fa', [
 // @route   POST /api/auth/setup-2fa
 // @desc    Setup 2FA for user
 // @access  Private
-router.post('/setup-2fa', auth, async (req, res) => {
+router.post('/setup-2fa', [auth], async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -539,7 +539,7 @@ router.post('/disable-2fa', [
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', auth, async (req, res) => {
+router.get('/me', [auth], async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     const wallet = await Wallet.findOne({ userId: user._id });
@@ -576,7 +576,7 @@ router.get('/me', auth, async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Logout user (client-side token removal)
 // @access  Private
-router.post('/logout', auth, (req, res) => {
+router.post('/logout', [auth], (req, res) => {
   res.json({
     success: true,
     message: 'Logged out successfully'

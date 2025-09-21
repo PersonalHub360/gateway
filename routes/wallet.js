@@ -6,7 +6,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
-const { auth, requireVerification } = require('../middleware/auth');
+const { auth, requireFullVerification } = require('../middleware/auth');
 const { encryptWalletData, decryptWalletData } = require('../utils/encryption');
 const { convertCurrency, formatCurrency, validateCurrencyAmount } = require('../utils/currency');
 const { createOTP, verifyOTP } = require('../utils/otp');
@@ -98,7 +98,7 @@ router.get('/:walletId', [
 // Create new wallet
 router.post('/create', [
   auth,
-  requireVerification,
+  requireFullVerification,
   walletRateLimit,
   body('type').isIn(['personal', 'agent', 'merchant']).withMessage('Invalid wallet type'),
   body('currency').isIn(['USD', 'USDT', 'AED', 'BDT', 'INR', 'PKR']).withMessage('Invalid currency'),
@@ -247,7 +247,7 @@ router.get('/:walletId/balance', [
 // Transfer funds between wallets
 router.post('/transfer', [
   auth,
-  requireVerification,
+  requireFullVerification,
   transferRateLimit,
   body('fromWalletId').isMongoId().withMessage('Invalid from wallet ID'),
   body('toWalletId').notEmpty().withMessage('To wallet ID is required'),
@@ -517,7 +517,7 @@ router.get('/:walletId/transactions', [
 // Freeze/unfreeze wallet
 router.patch('/:walletId/freeze', [
   auth,
-  requireVerification,
+  requireFullVerification,
   walletRateLimit,
   param('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('action').isIn(['freeze', 'unfreeze']).withMessage('Action must be freeze or unfreeze'),
@@ -600,7 +600,7 @@ router.patch('/:walletId/freeze', [
 // Request wallet backup
 router.post('/:walletId/backup', [
   auth,
-  requireVerification,
+  requireFullVerification,
   walletRateLimit,
   param('walletId').isMongoId().withMessage('Invalid wallet ID'),
   body('pin').isLength({ min: 4, max: 6 }).isNumeric().withMessage('PIN must be 4-6 digits')
