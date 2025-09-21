@@ -1,8 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./config/logger');
 require('dotenv').config();
@@ -18,23 +16,14 @@ const cashinRoutes = require('./routes/cashin');
 const reportsRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/user');
-
-// Security middleware
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use(limiter);
+const notificationRoutes = require('./routes/notifications');
+const dashboardRoutes = require('./routes/dashboard');
 
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com']
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3005', 'http://localhost:3006', 'http://localhost:3007'],
+    : true, // Allow all origins in development
   credentials: true
 }));
 
@@ -46,18 +35,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea-payment-gateway', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea_payment_gateway', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
-  console.log('Connected to MongoDB');
+  console.log('✅ Connected to MongoDB');
   logger.info('MongoDB connection established');
 })
 .catch((error) => {
-  console.error('MongoDB connection error:', error.message);
-  console.log('Server will continue without MongoDB connection for development');
-  logger.error('MongoDB connection failed', { error: error.message });
+  console.warn('⚠️  MongoDB connection failed:', error.message);
+  console.log('📝 Server will continue without MongoDB connection for development');
+  console.log('💡 To enable MongoDB, install and start MongoDB service');
+  logger.warn('MongoDB connection failed - running in development mode without database', { error: error.message });
   // Continue without MongoDB for development - don't exit
 });
 
@@ -70,6 +60,8 @@ app.use('/api/cashin', cashinRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

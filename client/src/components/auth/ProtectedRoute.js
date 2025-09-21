@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { isAuthenticated, user, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, isLoading: loading } = useSelector((state) => state.auth);
   const location = useLocation();
 
   // Show loading spinner while checking authentication
@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   // Check if email is verified (except for verification pages)
-  if (user && !user.emailVerified && !location.pathname.includes('verify')) {
+  if (user && !user.isEmailVerified && !location.pathname.includes('verify')) {
     return <Navigate to="/verify-email" replace />;
   }
 

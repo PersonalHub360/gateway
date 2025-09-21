@@ -5,7 +5,7 @@ require('dotenv').config();
 const seedAdmin = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea-gateway', {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea-payment-gateway', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });

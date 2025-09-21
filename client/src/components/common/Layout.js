@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   Box,
   AppBar,
@@ -57,7 +57,25 @@ const Layout = ({ children }) => {
 
   const { user } = useSelector((state) => state.auth);
   const { sidebarOpen, darkMode } = useSelector((state) => state.ui);
-  const { notifications, unreadCount } = useSelector((state) => state.notifications);
+  
+  // Get notifications state with comprehensive safety checks
+  const notifications = useSelector((state) => {
+    try {
+      return state?.notifications?.notifications || [];
+    } catch (error) {
+      console.error('Error accessing notifications:', error);
+      return [];
+    }
+  });
+  
+  const unreadCount = useSelector((state) => {
+    try {
+      return state?.notifications?.unreadCount || 0;
+    } catch (error) {
+      console.error('Error accessing unread count:', error);
+      return 0;
+    }
+  });
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
@@ -346,7 +364,7 @@ const Layout = ({ children }) => {
         }}
       >
         <Toolbar />
-        {children}
+        <Outlet />
       </Box>
 
       {/* Profile Menu */}

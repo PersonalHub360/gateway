@@ -22,14 +22,14 @@ import {
   Lock,
   Login as LoginIcon,
 } from '@mui/icons-material';
-import { login } from '../../store/slices/authSlice';
+import { login, clearError } from '../../store/slices/authSlice';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+  const { isLoading: loading, error, isAuthenticated } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -46,6 +46,11 @@ const Login = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
+
+  // Clear errors when component mounts
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   const validateForm = () => {
     const errors = {};
@@ -89,6 +94,9 @@ const Login = () => {
       return;
     }
 
+    // Clear any previous errors
+    dispatch(clearError());
+
     try {
       await dispatch(login(formData)).unwrap();
     } catch (error) {
@@ -128,6 +136,7 @@ const Login = () => {
               {error}
             </Alert>
           )}
+          
 
           <form onSubmit={handleSubmit}>
             <TextField

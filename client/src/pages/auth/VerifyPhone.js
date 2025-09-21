@@ -32,7 +32,7 @@ const VerifyPhone = () => {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   useEffect(() => {
-    if (user?.phoneVerified) {
+    if (user?.isPhoneVerified) {
       navigate('/dashboard');
     }
   }, [user, navigate]);

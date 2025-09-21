@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 const initialState = {
   user: null,
   token: localStorage.getItem('token'),
-  isAuthenticated: false,
+  isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
   error: null,
   isEmailVerified: false,
@@ -21,11 +21,24 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await authAPI.login(credentials);
-      localStorage.setItem('token', response.data.token);
-      return response.data;
+      // Transform the credentials to match backend API format
+      const transformedCredentials = {
+        identifier: credentials.email, // Use email as identifier
+        password: credentials.password,
+        rememberMe: credentials.rememberMe
+      };
+      
+      const response = await authAPI.login(transformedCredentials);
+      
+      // The response should already be the data object from authAPI.login
+      if (response && response.token) {
+        localStorage.setItem('token', response.token);
+        return response;
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
     }
   }
 );
@@ -123,7 +136,7 @@ export const checkAuthStatus = createAsyncThunk(
         throw new Error('No token found');
       }
       const response = await authAPI.getProfile();
-      return response.data;
+      return response; // Return the entire response object
     } catch (error) {
       localStorage.removeItem('token');
       return rejectWithValue('Authentication check failed');
@@ -244,14 +257,15 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.user = action.payload.user || null;
+        state.token = action.payload.token || null;
         state.isAuthenticated = true;
-        state.isEmailVerified = action.payload.user.isEmailVerified;
-        state.isPhoneVerified = action.payload.user.isPhoneVerified;
-        state.is2FAEnabled = action.payload.user.is2FAEnabled;
+        state.isEmailVerified = action.payload.user?.isEmailVerified || false;
+        state.isPhoneVerified = action.payload.user?.isPhoneVerified || false;
+        state.is2FAEnabled = action.payload.user?.is2FAEnabled || false;
         state.loginAttempts = 0;
         state.lockoutTime = null;
+        state.error = null;
         toast.success('Login successful!');
       })
       .addCase(login.rejected, (state, action) => {
@@ -387,11 +401,11 @@ const authSlice = createSlice({
       })
       .addCase(checkAuthStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
+        state.user = action.payload?.user || null;
         state.isAuthenticated = true;
-        state.isEmailVerified = action.payload.user.isEmailVerified;
-        state.isPhoneVerified = action.payload.user.isPhoneVerified;
-        state.is2FAEnabled = action.payload.user.is2FAEnabled;
+        state.isEmailVerified = action.payload?.user?.isEmailVerified || false;
+        state.isPhoneVerified = action.payload?.user?.isPhoneVerified || false;
+        state.is2FAEnabled = action.payload?.user?.twoFactorEnabled || false;
       })
       .addCase(checkAuthStatus.rejected, (state) => {
         state.isLoading = false;
@@ -430,8 +444,8 @@ const authSlice = createSlice({
 
       // Refresh Token
       .addCase(refreshToken.fulfilled, (state, action) => {
-        state.token = action.payload.token;
-        state.user = action.payload.user;
+        state.token = action.payload.token || null;
+        state.user = action.payload.user || null;
       })
       .addCase(refreshToken.rejected, (state) => {
         state.user = null;

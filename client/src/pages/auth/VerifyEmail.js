@@ -34,7 +34,7 @@ const VerifyEmail = () => {
     if (token) {
       // Verify email with token from URL
       handleVerifyEmail(token);
-    } else if (user?.emailVerified) {
+    } else if (user?.isEmailVerified) {
       // User is already verified, redirect to dashboard
       navigate('/dashboard');
     }

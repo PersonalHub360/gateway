@@ -27,7 +27,7 @@ const transferRateLimit = rateLimit({
 });
 
 // Get user wallets
-router.get('/', [auth, walletRateLimit], async (req, res) => {
+router.get('/', auth, walletRateLimit, async (req, res) => {
   try {
     const wallets = await Wallet.find({ owner: req.user.id })
       .select('-__v')

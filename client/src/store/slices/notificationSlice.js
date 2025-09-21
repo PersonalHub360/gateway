@@ -35,7 +35,7 @@ export const getNotifications = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const response = await notificationAPI.getNotifications(params);
-      return response.data;
+      return response; // Return the entire response object
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch notifications');
     }
@@ -208,13 +208,14 @@ const notificationSlice = createSlice({
       })
       .addCase(getNotifications.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.notifications = action.payload.notifications;
+        state.notifications = action.payload?.notifications || [];
         state.pagination = {
-          page: action.payload.page,
-          limit: action.payload.limit,
-          total: action.payload.total,
-          totalPages: action.payload.totalPages,
+          page: action.payload?.pagination?.page || 1,
+          limit: action.payload?.pagination?.limit || 20,
+          total: action.payload?.pagination?.total || 0,
+          totalPages: action.payload?.pagination?.totalPages || 0,
         };
+        state.unreadCount = action.payload?.unreadCount || 0;
       })
       .addCase(getNotifications.rejected, (state, action) => {
         state.isLoading = false;

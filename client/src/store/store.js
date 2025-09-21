@@ -14,7 +14,7 @@ const store = configureStore({
     transaction: transactionSlice,
     admin: adminSlice,
     payment: paymentSlice,
-    notification: notificationSlice,
+    notifications: notificationSlice, // Changed from 'notification' to 'notifications' to match Layout usage
     ui: uiSlice,
   },
   middleware: (getDefaultMiddleware) =>

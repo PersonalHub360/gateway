@@ -14,12 +14,16 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Paper,
   IconButton,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
-  AccountBalanceWallet,
   TrendingUp,
   TrendingDown,
   Send,
@@ -31,319 +35,546 @@ import {
   Visibility,
   VisibilityOff,
   Refresh,
-  Notifications,
+  People,
+  Security,
+  Speed,
+  CheckCircle,
+  Error,
+  Info,
 } from '@mui/icons-material';
-import { fetchUserProfile } from '../store/slices/authSlice';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+// import { fetchUserProfile } from '../store/slices/authSlice';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  ArcElement
+);
+
 const Dashboard = () => {
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, loading } = useSelector((state) => state.auth);
+  const { user, isLoading: loading } = useSelector((state) => state.auth);
   
   const [showBalance, setShowBalance] = useState(true);
-  const [recentTransactions] = useState([
-    { id: 1, type: 'received', amount: 250.00, from: 'John Doe', date: '2024-01-15', status: 'completed' },
-    { id: 2, type: 'sent', amount: 100.00, to: 'Jane Smith', date: '2024-01-14', status: 'completed' },
-    { id: 3, type: 'bill', amount: 75.50, description: 'Electricity Bill', date: '2024-01-13', status: 'completed' },
-    { id: 4, type: 'topup', amount: 25.00, description: 'Mobile Topup', date: '2024-01-12', status: 'completed' },
-  ]);
+  const [dashboardData, setDashboardData] = useState({
+    stats: null,
+    recentTransactions: [],
+    chartData: null,
+    activities: []
+  });
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState(null);
+  
+  console.log('Dashboard component rendered', { user, loading, loadingData });
 
-  const quickActions = [
-    { title: 'Send Money', icon: <Send />, path: '/send-money', color: '#1976d2' },
-    { title: 'Request Money', icon: <GetApp />, path: '/request-money', color: '#388e3c' },
-    { title: 'Cash In', icon: <AccountBalanceWallet />, path: '/cash-in', color: '#f57c00' },
-    { title: 'Cash Out', icon: <Payment />, path: '/cash-out', color: '#d32f2f' },
-    { title: 'Bill Payments', icon: <Receipt />, path: '/bill-payments', color: '#7b1fa2' },
-    { title: 'Mobile Topup', icon: <Phone />, path: '/mobile-topup', color: '#0288d1' },
-  ];
+  // Mock wallet balance - in real app, this would come from wallet API
+  const walletBalance = 12567.89;
+  const monthlySpending = 2340.50;
+  const monthlyIncome = 5670.00;
 
   useEffect(() => {
-    dispatch(fetchUserProfile());
-  }, [dispatch]);
+    fetchDashboardData();
+  }, []);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  const fetchDashboardData = async () => {
+    try {
+      console.log('Fetching dashboard data...');
+      setLoadingData(true);
+      setError(null);
 
-  const getTransactionIcon = (type) => {
-    switch (type) {
-      case 'received':
-        return <TrendingUp sx={{ color: 'success.main' }} />;
-      case 'sent':
-        return <TrendingDown sx={{ color: 'error.main' }} />;
-      case 'bill':
-        return <Receipt sx={{ color: 'warning.main' }} />;
-      case 'topup':
-        return <Phone sx={{ color: 'info.main' }} />;
-      default:
-        return <Payment />;
+      // Fetch dashboard statistics
+      const statsResponse = await fetch('/api/dashboard/stats', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const statsData = await statsResponse.json();
+      console.log('Stats data received:', statsData);
+
+      // Fetch recent transactions
+      const transactionsResponse = await fetch('/api/dashboard/recent-transactions?limit=5', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const transactionsData = await transactionsResponse.json();
+
+      // Fetch chart data
+      const chartResponse = await fetch('/api/dashboard/chart-data?type=transactions', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const chartData = await chartResponse.json();
+
+      // Fetch activity feed
+      const activitiesResponse = await fetch('/api/dashboard/activity-feed?limit=10', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const activitiesData = await activitiesResponse.json();
+
+      const newData = {
+        stats: statsData.stats,
+        recentTransactions: transactionsData.transactions || [],
+        chartData: chartData.chartData,
+        activities: activitiesData.activities || []
+      };
+      console.log('Setting dashboard data:', newData);
+      setDashboardData(newData);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoadingData(false);
     }
   };
 
-  const getTransactionColor = (type) => {
-    switch (type) {
-      case 'received':
-        return 'success.main';
-      case 'sent':
-        return 'error.main';
-      case 'bill':
-        return 'warning.main';
-      case 'topup':
-        return 'info.main';
-      default:
-        return 'text.primary';
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'pending': return 'warning';
+      case 'failed': return 'error';
+      default: return 'default';
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner fullScreen message="Loading dashboard..." />;
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'user_registration': return <People />;
+      case 'transaction_completed': return <CheckCircle />;
+      case 'security_alert': return <Security />;
+      case 'system_maintenance': return <Speed />;
+      case 'transaction_failed': return <Error />;
+      default: return <Info />;
+    }
+  };
+
+  const getActivityColor = (severity) => {
+    switch (severity) {
+      case 'success': return 'success';
+      case 'warning': return 'warning';
+      case 'error': return 'error';
+      case 'info': return 'info';
+      default: return 'default';
+    }
+  };
+
+  if (loading || loadingData) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <LoadingSpinner size={60} />
+      </Box>
+    );
   }
+
+  console.log('Rendering dashboard with data:', dashboardData);
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Welcome Section */}
-      <Box sx={{ mb: 3 }}>
+      {/* Debug Info */}
+      <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+        <Typography variant="body2">
+          Debug: Dashboard loaded. User: {user?.firstName || 'Unknown'}, Loading: {String(loading || false)}, DataLoading: {String(loadingData || false)}
+        </Typography>
+      </Box>
+      
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          Welcome back, {user?.firstName || 'User'}!
+          Welcome back, {user?.firstName}!
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Here's what's happening with your account today.
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        {/* Balance Card */}
-        <Grid item xs={12} md={8}>
-          <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                    Total Balance
+                  <Typography color="text.secondary" gutterBottom>
+                    Wallet Balance
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                    <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                      {showBalance ? formatCurrency(user?.balance || 1250.75) : '••••••'}
-                    </Typography>
-                    <IconButton
-                      onClick={() => setShowBalance(!showBalance)}
-                      sx={{ color: 'white', ml: 1 }}
-                    >
-                      {showBalance ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
+                  <Typography variant="h4">
+                    {showBalance ? `$${walletBalance.toLocaleString()}` : '••••••'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Available funds
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setShowBalance(!showBalance)}>
+                  {showBalance ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                  <TrendingUp />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom>
+                    Monthly Income
+                  </Typography>
+                  <Typography variant="h4">
+                    ${monthlyIncome.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="success.main">
+                    +12.5% from last month
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                  <TrendingDown />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom>
+                    Monthly Spending
+                  </Typography>
+                  <Typography variant="h4">
+                    ${monthlySpending.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="warning.main">
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                  <Receipt />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom>
+                    Total Transactions
+                  </Typography>
+                  <Typography variant="h4">
+                    {dashboardData.stats?.totalTransactions || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    This month
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* System Stats */}
+      {dashboardData.stats && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  System Overview
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Total Users</Typography>
+                    <Typography variant="h6">{dashboardData.stats.totalUsers.toLocaleString()}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Active Users</Typography>
+                    <Typography variant="h6">{dashboardData.stats.activeUsers.toLocaleString()}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Total Volume</Typography>
+                    <Typography variant="h6">${dashboardData.stats.totalVolume.toLocaleString()}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">System Uptime</Typography>
+                    <Chip label={dashboardData.stats.systemUptime} color="success" size="small" />
                   </Box>
                 </Box>
-                <IconButton sx={{ color: 'white' }}>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Transaction Status
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Completed</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {dashboardData.stats.completedTransactions.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Pending</Typography>
+                    <Typography variant="h6" color="warning.main">
+                      {dashboardData.stats.pendingTransactions.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Failed</Typography>
+                    <Typography variant="h6" color="error.main">
+                      {dashboardData.stats.failedTransactions.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2">Success Rate</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {((dashboardData.stats.completedTransactions / dashboardData.stats.totalTransactions) * 100).toFixed(1)}%
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Charts and Recent Activity */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Transaction Chart */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Transaction Volume</Typography>
+                <IconButton onClick={fetchDashboardData}>
                   <Refresh />
                 </IconButton>
               </Box>
-              
-              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-                <Chip
-                  label={`Available: ${formatCurrency(user?.availableBalance || 1200.75)}`}
-                  sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                />
-                <Chip
-                  label={`Pending: ${formatCurrency(user?.pendingBalance || 50.00)}`}
-                  sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                />
-              </Box>
+              {dashboardData.chartData && (
+                <Box sx={{ height: 300 }}>
+                  <Line
+                    data={dashboardData.chartData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        title: {
+                          display: true,
+                          text: 'Daily Transaction Volume'
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true
+                        }
+                      }
+                    }}
+                  />
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Profile Summary */}
+        {/* Recent Activity */}
         <Grid item xs={12} md={4}>
           <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <Avatar
-                sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'primary.main' }}
-              >
-                {user?.firstName?.charAt(0) || 'U'}
-              </Avatar>
-              <Typography variant="h6" gutterBottom>
-                {user?.firstName} {user?.lastName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {user?.email}
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 2 }}>
-                <Chip
-                  label={user?.emailVerified ? 'Email Verified' : 'Email Pending'}
-                  color={user?.emailVerified ? 'success' : 'warning'}
-                  size="small"
-                />
-                <Chip
-                  label={user?.phoneVerified ? 'Phone Verified' : 'Phone Pending'}
-                  color={user?.phoneVerified ? 'success' : 'warning'}
-                  size="small"
-                />
-              </Box>
-              <Button
-                variant="outlined"
-                fullWidth
-                sx={{ mt: 2 }}
-                onClick={() => navigate('/profile')}
-              >
-                View Profile
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Quick Actions */}
-        <Grid item xs={12}>
-          <Typography variant="h6" gutterBottom>
-            Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            {quickActions.map((action, index) => (
-              <Grid item xs={6} sm={4} md={2} key={index}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: 3,
-                    },
-                  }}
-                  onClick={() => navigate(action.path)}
-                >
-                  <Box
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                      backgroundColor: action.color,
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      mx: 'auto',
-                      mb: 1,
-                    }}
-                  >
-                    {action.icon}
-                  </Box>
-                  <Typography variant="body2" fontWeight="medium">
-                    {action.title}
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Grid>
-
-        {/* Recent Transactions */}
-        <Grid item xs={12} md={8}>
-          <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  Recent Transactions
-                </Typography>
-                <Button
-                  variant="text"
-                  onClick={() => navigate('/transactions')}
-                >
-                  View All
-                </Button>
-              </Box>
+              <Typography variant="h6" gutterBottom>
+                Recent Activity
+              </Typography>
               <List>
-                {recentTransactions.map((transaction, index) => (
-                  <React.Fragment key={transaction.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemIcon>
-                        {getTransactionIcon(transaction.type)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="body1">
-                              {transaction.from && `From ${transaction.from}`}
-                              {transaction.to && `To ${transaction.to}`}
-                              {transaction.description && transaction.description}
-                            </Typography>
-                            <Typography
-                              variant="body1"
-                              fontWeight="bold"
-                              sx={{ color: getTransactionColor(transaction.type) }}
-                            >
-                              {transaction.type === 'received' ? '+' : '-'}
-                              {formatCurrency(transaction.amount)}
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(transaction.date).toLocaleDateString()}
-                            </Typography>
-                            <Chip
-                              label={transaction.status}
-                              size="small"
-                              color="success"
-                              variant="outlined"
-                            />
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < recentTransactions.length - 1 && <Divider />}
-                  </React.Fragment>
+                {dashboardData.activities.slice(0, 5).map((activity, index) => (
+                  <ListItem key={activity.id} sx={{ px: 0 }}>
+                    <ListItemIcon>
+                      <Avatar sx={{ bgcolor: `${getActivityColor(activity.severity)}.main`, width: 32, height: 32 }}>
+                        {getActivityIcon(activity.type)}
+                      </Avatar>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={activity.message}
+                      secondary={new Date(activity.timestamp).toLocaleTimeString()}
+                      primaryTypographyProps={{ variant: 'body2' }}
+                      secondaryTypographyProps={{ variant: 'caption' }}
+                    />
+                  </ListItem>
                 ))}
               </List>
             </CardContent>
           </Card>
         </Grid>
+      </Grid>
 
-        {/* Notifications */}
-        <Grid item xs={12} md={4}>
+      {/* Recent Transactions */}
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Notifications sx={{ mr: 1 }} />
-                <Typography variant="h6">
-                  Notifications
-                </Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Recent Transactions</Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<Receipt />}
+                  onClick={() => navigate('/transactions')}
+                >
+                  View All
+                </Button>
               </Box>
-              <List dense>
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText
-                    primary="Welcome to Trea Gateway!"
-                    secondary="Complete your profile to get started"
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText
-                    primary="Security Alert"
-                    secondary="Enable 2FA for better security"
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText
-                    primary="New Feature"
-                    secondary="Try our new bill payment feature"
-                  />
-                </ListItem>
-              </List>
-              <Button
-                variant="text"
-                fullWidth
-                sx={{ mt: 1 }}
-                onClick={() => navigate('/notifications')}
-              >
-                View All Notifications
-              </Button>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Transaction ID</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Time</TableCell>
+                      <TableCell>Description</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dashboardData.recentTransactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <Typography variant="body2" fontFamily="monospace">
+                            {transaction.id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={transaction.type}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            ${transaction.amount.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={transaction.status}
+                            size="small"
+                            color={getStatusColor(transaction.status)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(transaction.timestamp).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {transaction.description}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Quick Actions */}
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Quick Actions
+              </Typography>
+              <Box display="flex" gap={2} flexWrap="wrap">
+                <Button
+                  variant="contained"
+                  startIcon={<Send />}
+                  onClick={() => navigate('/send-money')}
+                >
+                  Send Money
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<GetApp />}
+                  onClick={() => navigate('/cash-in')}
+                >
+                  Cash In
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Payment />}
+                  onClick={() => navigate('/bill-payments')}
+                >
+                  Pay Bills
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Phone />}
+                  onClick={() => navigate('/mobile-topup')}
+                >
+                  Mobile Topup
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<ShoppingCart />}
+                  onClick={() => navigate('/shop-payments')}
+                >
+                  Shop Payments
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

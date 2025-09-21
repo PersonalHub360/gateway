@@ -94,7 +94,7 @@ router.get('/generate', [
 });
 
 // Get available report types
-router.get('/types', [auth, adminAuth], async (req, res) => {
+router.get('/types', auth, adminAuth, async (req, res) => {
   try {
     const reportTypes = [
       {

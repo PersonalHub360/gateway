@@ -404,7 +404,7 @@ router.post('/verify-2fa', [
 // @route   POST /api/auth/setup-2fa
 // @desc    Setup 2FA for user
 // @access  Private
-router.post('/setup-2fa', [auth], async (req, res) => {
+router.post('/setup-2fa', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -576,10 +576,47 @@ router.post('/disable-2fa', [
   }
 });
 
+// @route   GET /api/auth/profile
+// @desc    Get current user profile (alias for /me)
+// @access  Private
+router.get('/profile', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    const wallet = await Wallet.findOne({ userId: user._id });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        userType: user.userType,
+        status: user.status,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        isKYCVerified: user.isKYCVerified,
+        twoFactorEnabled: user.twoFactorAuth.enabled,
+        walletId: wallet?.walletId,
+        profile: user.profile,
+        preferences: user.preferences,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', [auth], async (req, res) => {
+router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     const wallet = await Wallet.findOne({ userId: user._id });
@@ -616,7 +653,7 @@ router.get('/me', [auth], async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Logout user (client-side token removal)
 // @access  Private
-router.post('/logout', [auth], (req, res) => {
+router.post('/logout', auth, (req, res) => {
   res.json({
     success: true,
     message: 'Logged out successfully'

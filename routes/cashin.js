@@ -32,7 +32,7 @@ const BANKS = {
 };
 
 // Get available payment methods
-router.get('/payment-methods', [auth], async (req, res) => {
+router.get('/payment-methods', auth, async (req, res) => {
   try {
     const paymentMethods = PaymentGatewayService.getAvailablePaymentMethods();
     
@@ -439,7 +439,7 @@ router.post('/callback/:gateway', async (req, res) => {
 });
 
 // Get cash-in history
-router.get('/history', [auth], async (req, res) => {
+router.get('/history', auth, async (req, res) => {
   try {
     const { page = 1, limit = 10, status, paymentMethod, cashinType } = req.query;
     const userId = req.user.id;
@@ -483,7 +483,7 @@ router.get('/history', [auth], async (req, res) => {
 });
 
 // Get transaction status
-router.get('/status/:transactionId', [auth], async (req, res) => {
+router.get('/status/:transactionId', auth, async (req, res) => {
   try {
     const { transactionId } = req.params;
     const userId = req.user.id;
