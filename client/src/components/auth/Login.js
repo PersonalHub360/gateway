@@ -246,7 +246,7 @@ const Login = () => {
                 to="/forgot-password"
                 style={{
                   textDecoration: 'none',
-                  color: theme.palette.primary.main,
+                  color: '#667eea',
                   fontSize: '0.875rem',
                 }}
               >
@@ -260,7 +260,7 @@ const Login = () => {
               variant="contained"
               size="large"
               disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : <LoginIcon />}
+              startIcon={loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <LoginIcon />}
               sx={{
                 mb: 3,
                 py: 1.5,
@@ -312,7 +312,7 @@ const Login = () => {
                 to="/register"
                 style={{
                   textDecoration: 'none',
-                  color: theme.palette.primary.main,
+                  color: '#667eea',
                   fontWeight: 'medium',
                 }}
               >

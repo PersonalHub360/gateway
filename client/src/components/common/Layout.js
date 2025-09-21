@@ -216,10 +216,10 @@ const Layout = ({ children }) => {
                 mx: 1,
                 borderRadius: 1,
                 '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
                   '& .MuiListItemIcon-root': {
-                    color: theme.palette.primary.contrastText,
+                    color: 'primary.contrastText',
                   },
                 },
               }}

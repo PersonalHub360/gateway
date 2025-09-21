@@ -6,8 +6,7 @@ const QRCode = require('qrcode');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 
-const User = require('../models/User');
-const Wallet = require('../models/Wallet');
+const models = require('../models');
 const { sendEmail } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { generateOTP } = require('../utils/otp');
@@ -66,8 +65,10 @@ router.post('/register', [
     const { firstName, lastName, email, phone, password, userType } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [{ email }, { phone }]
+    const existingUser = await models.User.findOne({
+      where: {
+        [models.sequelize.Op.or]: [{ email }, { phone }]
+      }
     });
 
     if (existingUser) {
@@ -78,7 +79,7 @@ router.post('/register', [
     }
 
     // Create new user
-    const user = new User({
+    const user = await models.User.create({
       firstName,
       lastName,
       email,
@@ -87,30 +88,25 @@ router.post('/register', [
       userType
     });
 
-    await user.save();
-
     // Create wallet for the user
-    const walletId = Wallet.generateWalletId(userType);
-    const wallet = new Wallet({
-      userId: user._id,
-      walletType: userType,
-      walletId
+    const wallet = await models.Wallet.create({
+      userId: user.id,
+      walletType: userType
     });
-
-    await wallet.save();
 
     // Generate email verification token
     const emailToken = jwt.sign(
-      { userId: user._id, type: 'email_verification' },
+      { userId: user.id, type: 'email_verification' },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // Generate phone verification OTP
     const phoneOTP = generateOTP();
-    user.phoneVerificationToken = phoneOTP;
-    user.emailVerificationToken = emailToken;
-    await user.save();
+    await user.update({
+      phoneVerificationToken: phoneOTP,
+      emailVerificationToken: emailToken
+    });
 
     // Send verification email
     await sendEmail({
@@ -133,7 +129,7 @@ router.post('/register', [
       success: true,
       message: 'User registered successfully. Please verify your email and phone number.',
       data: {
-        userId: user._id,
+        userId: user.id,
         walletId: wallet.walletId,
         email: user.email,
         phone: user.phone
@@ -170,12 +166,14 @@ router.post('/login', [
     const { identifier, password } = req.body;
 
     // Find user by email or phone
-    const user = await User.findOne({
-      $or: [
-        { email: identifier.toLowerCase() },
-        { phone: identifier }
-      ]
-    }).select('+password');
+    const user = await models.User.findOne({
+      where: {
+        [models.sequelize.Op.or]: [
+          { email: identifier.toLowerCase() },
+          { phone: identifier }
+        ]
+      }
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -214,14 +212,13 @@ router.post('/login', [
     }
 
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    await user.update({ lastLogin: new Date() });
 
     // Check if 2FA is enabled
     if (user.twoFactorAuth.enabled) {
       // Generate temporary token for 2FA verification
       const tempToken = jwt.sign(
-        { userId: user._id, type: '2fa_pending' },
+        { userId: user.id, type: '2fa_pending' },
         process.env.JWT_SECRET,
         { expiresIn: '10m' }
       );
@@ -236,20 +233,20 @@ router.post('/login', [
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user.id },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
     // Get user's wallet
-    const wallet = await Wallet.findOne({ userId: user._id });
+    const wallet = await models.Wallet.findOne({ where: { userId: user.id } });
 
     res.json({
       success: true,
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,

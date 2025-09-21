@@ -122,7 +122,7 @@ export const checkAuthStatus = createAsyncThunk(
       if (!token) {
         throw new Error('No token found');
       }
-      const response = await authAPI.getProfile();
+      const response = await authAPI.getCurrentUser();
       return response.data;
     } catch (error) {
       localStorage.removeItem('token');

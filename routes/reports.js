@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { query, validationResult } = require('express-validator');
-const { auth, requireAdmin } = require('../middleware/auth');
+const { auth, adminAuth } = require('../middleware/auth');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
@@ -10,7 +10,7 @@ const logger = require('../config/logger');
 // Generate comprehensive report
 router.get('/generate', [
   auth,
-  requireAdmin,
+  adminAuth,
   query('startDate').isISO8601().withMessage('Invalid start date'),
   query('endDate').isISO8601().withMessage('Invalid end date'),
   query('reportType').optional().isIn(['summary', 'detailed', 'cashin', 'cashout', 'withdrawals', 'commissions']).withMessage('Invalid report type'),
@@ -434,7 +434,7 @@ function convertReportToCSV(reportData, reportType) {
 }
 
 // Get available report types
-router.get('/types', [auth, requireAdmin], async (req, res) => {
+router.get('/types', [auth, adminAuth], async (req, res) => {
   try {
     const reportTypes = [
       {

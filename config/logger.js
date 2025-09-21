@@ -288,13 +288,11 @@ logger.on('error', (error) => {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  logger.info('Application shutting down...');
-  logger.end();
+  console.log('Application shutting down...');
 });
 
 process.on('SIGTERM', () => {
-  logger.info('Application terminated...');
-  logger.end();
+  console.log('Application terminated...');
 });
 
 module.exports = logger;

@@ -1,461 +1,339 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
 
-const transactionSchema = new mongoose.Schema({
-  // Transaction Identification
-  transactionId: {
-    type: String,
-    unique: true,
-    required: [true, 'Transaction ID is required'],
-    index: true
-  },
-  
-  // Transaction Type and Category
-  type: {
-    type: String,
-    enum: [
-      'cash_in', 'cash_out', 'top_up', 'payment', 'transfer', 
-      'commission', 'refund', 'fee', 'penalty', 'adjustment'
-    ],
-    required: [true, 'Transaction type is required'],
-    index: true
-  },
-  
-  category: {
-    type: String,
-    enum: [
-      // Cash In Categories
-      'auto_merchant_cash_in', 'manual_cash_in',
-      
-      // Cash Out Categories
-      'auto_cash_out', 'manual_cash_out',
-      
-      // Top Up Categories
-      'currency_top_up', 'crypto_top_up',
-      
-      // Payment Categories
-      'electricity_bill', 'water_bill', 'internet_bill', 'mobile_top_up',
-      'shop_payment', 'card_payment', 'government_bill',
-      
-      // Transfer Categories
-      'wallet_to_wallet', 'bank_transfer', 'international_transfer',
-      
-      // System Categories
-      'commission_earning', 'service_fee', 'transaction_fee',
-      'refund_processing', 'chargeback', 'adjustment'
-    ],
-    required: [true, 'Transaction category is required'],
-    index: true
-  },
-  
-  // Parties Involved
-  fromUser: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    index: true
-  },
-  fromWallet: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Wallet',
-    index: true
-  },
-  toUser: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    index: true
-  },
-  toWallet: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Wallet',
-    index: true
-  },
-  
-  // Amount and Currency
-  amount: {
-    type: Number,
-    required: [true, 'Transaction amount is required'],
-    min: [0, 'Amount cannot be negative']
-  },
-  currency: {
-    type: String,
-    enum: ['USD', 'USDT', 'AED', 'BDT', 'INR', 'PKR'],
-    required: [true, 'Currency is required'],
-    index: true
-  },
-  
-  // Exchange Rate Information (for currency conversions)
-  exchangeRate: {
-    fromCurrency: String,
-    toCurrency: String,
-    rate: Number,
-    originalAmount: Number,
-    convertedAmount: Number,
-    rateProvider: String,
-    rateTimestamp: Date
-  },
-  
-  // Fees
-  fees: {
-    transactionFee: {
-      type: Number,
-      default: 0
+const defineTransaction = (sequelize) => {
+  const Transaction = sequelize.define('Transaction', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
-    processingFee: {
-      type: Number,
-      default: 0
+    transactionId: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true
     },
-    networkFee: {
-      type: Number,
-      default: 0
-    },
-    totalFees: {
-      type: Number,
-      default: 0
-    },
-    feesCurrency: {
-      type: String,
-      enum: ['USD', 'USDT', 'AED', 'BDT', 'INR', 'PKR'],
-      default: 'USD'
-    }
-  },
-  
-  // Transaction Status
-  status: {
-    type: String,
-    enum: [
-      'pending', 'processing', 'completed', 'failed', 
-      'cancelled', 'refunded', 'disputed', 'on_hold'
-    ],
-    default: 'pending',
-    required: true,
-    index: true
-  },
-  
-  // Status History
-  statusHistory: [{
-    status: {
-      type: String,
-      enum: [
-        'pending', 'processing', 'completed', 'failed', 
-        'cancelled', 'refunded', 'disputed', 'on_hold'
-      ]
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    },
-    reason: String,
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  }],
-  
-  // Transaction Details
-  description: {
-    type: String,
-    maxlength: [500, 'Description cannot exceed 500 characters']
-  },
-  reference: String, // External reference number
-  notes: String, // Internal notes
-  
-  // Payment Method Information
-  paymentMethod: {
     type: {
-      type: String,
-      enum: ['wallet', 'bank_transfer', 'card', 'mobile_money', 'crypto', 'cash']
+      type: DataTypes.ENUM(
+        'cash_in', 'cash_out', 'top_up', 'payment', 'transfer', 
+        'commission', 'refund', 'fee', 'penalty', 'adjustment'
+      ),
+      allowNull: false
     },
-    details: {
-      // For bank transfers
-      bankName: String,
-      accountNumber: String,
-      routingNumber: String,
-      
-      // For card payments
-      cardType: String,
-      cardLast4: String,
-      cardBrand: String,
-      
-      // For mobile money
-      mobileProvider: String,
-      mobileNumber: String,
-      
-      // For crypto
-      cryptoAddress: String,
-      cryptoTxHash: String,
-      blockchainNetwork: String
-    }
-  },
-  
-  // Bill Payment Specific Information
-  billPayment: {
-    serviceProvider: String,
-    accountNumber: String,
-    billAmount: Number,
-    billCurrency: String,
-    billDueDate: Date,
-    billReference: String,
-    meterNumber: String, // For utility bills
-    connectionId: String // For telecom bills
-  },
-  
-  // Agent/Merchant Information
-  agentInfo: {
-    agentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    category: {
+      type: DataTypes.ENUM(
+        'auto_merchant_cash_in', 'manual_cash_in',
+        'auto_cash_out', 'manual_cash_out',
+        'currency_top_up', 'crypto_top_up',
+        'electricity_bill', 'water_bill', 'internet_bill', 'mobile_top_up',
+        'shop_payment', 'card_payment', 'government_bill',
+        'wallet_to_wallet', 'bank_transfer', 'international_transfer',
+        'commission_earning', 'service_fee', 'transaction_fee',
+        'refund_processing', 'chargeback', 'adjustment'
+      ),
+      allowNull: false
     },
-    commission: {
-      rate: Number,
-      amount: Number,
-      currency: String
-    },
-    location: {
-      latitude: Number,
-      longitude: Number,
-      address: String
-    }
-  },
-  
-  // Security and Verification
-  verification: {
-    requiresApproval: {
-      type: Boolean,
-      default: false
-    },
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    approvedAt: Date,
-    otpVerified: {
-      type: Boolean,
-      default: false
-    },
-    pinVerified: {
-      type: Boolean,
-      default: false
-    },
-    biometricVerified: {
-      type: Boolean,
-      default: false
-    }
-  },
-  
-  // Risk Assessment
-  riskAssessment: {
-    riskScore: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0
-    },
-    riskLevel: {
-      type: String,
-      enum: ['low', 'medium', 'high', 'critical'],
-      default: 'low'
-    },
-    riskFactors: [String],
-    flaggedForReview: {
-      type: Boolean,
-      default: false
-    },
-    reviewedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    reviewedAt: Date
-  },
-  
-  // External System Integration
-  externalReferences: {
-    bankTransactionId: String,
-    paymentGatewayId: String,
-    blockchainTxId: String,
-    merchantTransactionId: String,
-    billerTransactionId: String
-  },
-  
-  // Metadata
-  metadata: {
-    userAgent: String,
-    ipAddress: String,
-    deviceId: String,
-    location: {
-      country: String,
-      city: String,
-      coordinates: {
-        latitude: Number,
-        longitude: Number
+    sender: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        userId: null,
+        walletId: null,
+        name: null,
+        email: null,
+        phone: null
       }
     },
-    channel: {
-      type: String,
-      enum: ['web', 'mobile', 'api', 'agent', 'admin'],
-      default: 'web'
-    }
-  },
-  
-  // Timestamps
-  initiatedAt: {
-    type: Date,
-    default: Date.now
-  },
-  processedAt: Date,
-  completedAt: Date,
-  failedAt: Date,
-  
-  // Scheduled Transaction
-  scheduledFor: Date,
-  isRecurring: {
-    type: Boolean,
-    default: false
-  },
-  recurringPattern: {
-    frequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly', 'yearly']
+    receiver: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        userId: null,
+        walletId: null,
+        name: null,
+        email: null,
+        phone: null,
+        bankAccount: null
+      }
     },
-    interval: Number, // Every X days/weeks/months/years
-    endDate: Date,
-    maxOccurrences: Number
-  },
-  
-  // Parent transaction (for refunds, disputes, etc.)
-  parentTransaction: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transaction'
-  },
-  
-  // Child transactions (for splits, fees, etc.)
-  childTransactions: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transaction'
-  }]
-}, {
-  timestamps: true
-});
-
-// Indexes
-transactionSchema.index({ transactionId: 1 });
-transactionSchema.index({ fromUser: 1, createdAt: -1 });
-transactionSchema.index({ toUser: 1, createdAt: -1 });
-transactionSchema.index({ type: 1, status: 1 });
-transactionSchema.index({ category: 1, createdAt: -1 });
-transactionSchema.index({ status: 1, createdAt: -1 });
-transactionSchema.index({ currency: 1, createdAt: -1 });
-transactionSchema.index({ 'verification.requiresApproval': 1, status: 1 });
-transactionSchema.index({ 'riskAssessment.flaggedForReview': 1 });
-transactionSchema.index({ scheduledFor: 1, status: 1 });
-
-// Virtual for formatted amount
-transactionSchema.virtual('formattedAmount').get(function() {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: this.currency,
-    minimumFractionDigits: 2
-  }).format(this.amount);
-});
-
-// Virtual for transaction duration
-transactionSchema.virtual('duration').get(function() {
-  if (this.completedAt && this.initiatedAt) {
-    return this.completedAt.getTime() - this.initiatedAt.getTime();
-  }
-  return null;
-});
-
-// Method to add status update
-transactionSchema.methods.updateStatus = function(newStatus, reason, updatedBy) {
-  this.status = newStatus;
-  this.statusHistory.push({
-    status: newStatus,
-    timestamp: new Date(),
-    reason: reason,
-    updatedBy: updatedBy
-  });
-  
-  // Update relevant timestamps
-  switch (newStatus) {
-    case 'processing':
-      this.processedAt = new Date();
-      break;
-    case 'completed':
-      this.completedAt = new Date();
-      break;
-    case 'failed':
-      this.failedAt = new Date();
-      break;
-  }
-  
-  return this.save();
-};
-
-// Method to calculate total amount including fees
-transactionSchema.methods.getTotalAmount = function() {
-  return this.amount + this.fees.totalFees;
-};
-
-// Method to check if transaction is pending approval
-transactionSchema.methods.isPendingApproval = function() {
-  return this.verification.requiresApproval && !this.verification.approvedBy;
-};
-
-// Method to approve transaction
-transactionSchema.methods.approve = function(approvedBy) {
-  this.verification.approvedBy = approvedBy;
-  this.verification.approvedAt = new Date();
-  return this.save();
-};
-
-// Static method to generate transaction ID
-transactionSchema.statics.generateTransactionId = function(type) {
-  const prefix = {
-    cash_in: 'CI',
-    cash_out: 'CO',
-    top_up: 'TU',
-    payment: 'PY',
-    transfer: 'TR',
-    commission: 'CM',
-    refund: 'RF',
-    fee: 'FE',
-    penalty: 'PN',
-    adjustment: 'AD'
-  };
-  
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 6);
-  
-  return `${prefix[type] || 'TX'}${timestamp}${random}`.toUpperCase();
-};
-
-// Static method to get transactions by user
-transactionSchema.statics.getByUser = function(userId, options = {}) {
-  const query = {
-    $or: [
-      { fromUser: userId },
-      { toUser: userId }
+    amount: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: {
+        value: 0,
+        currency: 'USD',
+        exchangeRate: 1
+      }
+    },
+    fee: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        value: 0,
+        currency: 'USD',
+        type: 'percentage',
+        rate: 0
+      }
+    },
+    status: {
+      type: DataTypes.ENUM(
+        'pending', 'processing', 'completed', 'failed', 'cancelled',
+        'pending_verification', 'pending_approval', 'chargeback', 'disputed'
+      ),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM(
+        'wallet', 'bank_transfer', 'credit_card', 'debit_card', 
+        'crypto', 'cash', 'mobile_money', 'other'
+      ),
+      allowNull: true
+    },
+    subType: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    reference: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    externalReference: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {}
+    },
+    processedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    completedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
+  }, {
+    tableName: 'transactions',
+    timestamps: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['transactionId']
+      },
+      {
+        fields: ['type']
+      },
+      {
+        fields: ['category']
+      },
+      {
+        fields: ['status']
+      },
+      {
+        fields: ['paymentMethod']
+      },
+      {
+        fields: ['createdAt']
+      }
     ]
+  });
+
+  // Instance methods
+  Transaction.prototype.generateTransactionId = function() {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `TXN${timestamp}${random}`;
   };
-  
-  if (options.status) {
-    query.status = options.status;
-  }
-  
-  if (options.type) {
-    query.type = options.type;
-  }
-  
-  if (options.dateFrom || options.dateTo) {
-    query.createdAt = {};
-    if (options.dateFrom) query.createdAt.$gte = new Date(options.dateFrom);
-    if (options.dateTo) query.createdAt.$lte = new Date(options.dateTo);
-  }
-  
-  return this.find(query)
-    .populate('fromUser', 'firstName lastName email')
-    .populate('toUser', 'firstName lastName email')
-    .sort({ createdAt: -1 })
-    .limit(options.limit || 50);
+
+  Transaction.prototype.calculateFee = function(feeRate = 0.025) {
+    const amount = this.amount.value;
+    const fee = amount * feeRate;
+    
+    this.fee = {
+      value: fee,
+      currency: this.amount.currency,
+      type: 'percentage',
+      rate: feeRate
+    };
+    
+    return fee;
+  };
+
+  Transaction.prototype.getNetAmount = function() {
+    return this.amount.value - (this.fee?.value || 0);
+  };
+
+  Transaction.prototype.canBeCancelled = function() {
+    return ['pending', 'processing', 'pending_verification'].includes(this.status);
+  };
+
+  Transaction.prototype.canBeRefunded = function() {
+    return this.status === 'completed' && this.type !== 'refund';
+  };
+
+  Transaction.prototype.markAsProcessing = async function() {
+    this.status = 'processing';
+    this.processedAt = new Date();
+    return this.save();
+  };
+
+  Transaction.prototype.markAsCompleted = async function() {
+    this.status = 'completed';
+    this.completedAt = new Date();
+    return this.save();
+  };
+
+  Transaction.prototype.markAsFailed = async function(reason = 'Transaction failed') {
+    this.status = 'failed';
+    this.metadata = {
+      ...this.metadata,
+      failureReason: reason
+    };
+    return this.save();
+  };
+
+  Transaction.prototype.markAsCancelled = async function(reason = 'Transaction cancelled') {
+    this.status = 'cancelled';
+    this.metadata = {
+      ...this.metadata,
+      cancellationReason: reason
+    };
+    return this.save();
+  };
+
+  // Class methods
+  Transaction.findByTransactionId = function(transactionId) {
+    return this.findOne({
+      where: { transactionId }
+    });
+  };
+
+  Transaction.findByReference = function(reference) {
+    return this.findOne({
+      where: { reference }
+    });
+  };
+
+  Transaction.findByExternalReference = function(externalReference) {
+    return this.findOne({
+      where: { externalReference }
+    });
+  };
+
+  Transaction.findByUserId = function(userId, options = {}) {
+    return this.findAll({
+      where: {
+        [sequelize.Op.or]: [
+          { 'sender.userId': userId },
+          { 'receiver.userId': userId }
+        ]
+      },
+      order: [['createdAt', 'DESC']],
+      ...options
+    });
+  };
+
+  Transaction.findByWalletId = function(walletId, options = {}) {
+    return this.findAll({
+      where: {
+        [sequelize.Op.or]: [
+          { 'sender.walletId': walletId },
+          { 'receiver.walletId': walletId }
+        ]
+      },
+      order: [['createdAt', 'DESC']],
+      ...options
+    });
+  };
+
+  Transaction.findByStatus = function(status, options = {}) {
+    return this.findAll({
+      where: { status },
+      order: [['createdAt', 'DESC']],
+      ...options
+    });
+  };
+
+  Transaction.findByType = function(type, options = {}) {
+    return this.findAll({
+      where: { type },
+      order: [['createdAt', 'DESC']],
+      ...options
+    });
+  };
+
+  Transaction.findByDateRange = function(startDate, endDate, options = {}) {
+    return this.findAll({
+      where: {
+        createdAt: {
+          [sequelize.Op.between]: [startDate, endDate]
+        }
+      },
+      order: [['createdAt', 'DESC']],
+      ...options
+    });
+  };
+
+  Transaction.getStatsByPeriod = async function(startDate, endDate) {
+    const stats = await this.findAll({
+      where: {
+        createdAt: {
+          [sequelize.Op.between]: [startDate, endDate]
+        }
+      },
+      attributes: [
+        'type',
+        'status',
+        'amount',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('SUM', sequelize.col('JSON_EXTRACT(amount, "$.value")')), 'totalAmount']
+      ],
+      group: ['type', 'status', 'amount'],
+      raw: true
+    });
+    
+    return stats;
+  };
+
+  Transaction.generateTransactionId = function() {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `TXN${timestamp}${random}`;
+  };
+
+  // Hooks
+  Transaction.beforeCreate(async (transaction) => {
+    if (!transaction.transactionId) {
+      transaction.transactionId = Transaction.generateTransactionId();
+    }
+    
+    // Auto-calculate fee if not provided
+    if (!transaction.fee && transaction.type !== 'commission') {
+      transaction.calculateFee();
+    }
+  });
+
+  Transaction.beforeUpdate(async (transaction) => {
+    // Update timestamps based on status changes
+    if (transaction.changed('status')) {
+      switch (transaction.status) {
+        case 'processing':
+          transaction.processedAt = new Date();
+          break;
+        case 'completed':
+          transaction.completedAt = new Date();
+          break;
+      }
+    }
+  });
+
+  return Transaction;
 };
 
-module.exports = mongoose.model('Transaction', transactionSchema);
+module.exports = defineTransaction;

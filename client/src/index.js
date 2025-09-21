@@ -11,7 +11,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 
 import App from './App';
-import { store, persistor } from './store/store';
+import { store, persistor } from './store';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import './index.css';
 
@@ -29,6 +29,7 @@ const queryClient = new QueryClient({
 // Create Material-UI theme
 const theme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
       main: '#667eea',
       light: '#8fa4f3',
@@ -44,6 +45,10 @@ const theme = createTheme({
     background: {
       default: '#f5f5f5',
       paper: '#ffffff',
+    },
+    text: {
+      primary: '#333333',
+      secondary: '#666666',
     },
     success: {
       main: '#4caf50',
@@ -175,7 +180,12 @@ root.render(
           <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme}>
               <CssBaseline />
-              <BrowserRouter>
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true,
+                }}
+              >
                 <App />
                 <Toaster
                   position="top-right"

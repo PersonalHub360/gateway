@@ -1,0 +1,15 @@
+{
+  "short_name": "Trea Gateway",
+  "name": "Trea Payment Gateway",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff"
+}

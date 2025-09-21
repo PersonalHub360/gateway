@@ -426,8 +426,8 @@ const AdminDashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="volume"
-                  stroke={theme.palette.primary.main}
-                  fill={theme.palette.primary.main}
+                  stroke="#667eea"
+                  fill="#667eea"
                   fillOpacity={0.3}
                 />
               </AreaChart>

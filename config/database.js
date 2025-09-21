@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
 const winston = require('winston');
 
 // Configure logger
@@ -21,56 +21,52 @@ const logger = winston.createLogger({
 
 class Database {
   constructor() {
-    this.connection = null;
+    this.sequelize = null;
     this.isConnected = false;
   }
 
   async connect() {
     try {
-      const mongoURI = process.env.NODE_ENV === 'test' 
-        ? process.env.MONGODB_TEST_URI 
-        : process.env.MONGODB_URI;
-
-      if (!mongoURI) {
-        throw new Error('MongoDB URI is not defined in environment variables');
-      }
-
-      const options = {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        maxPoolSize: 10, // Maintain up to 10 socket connections
-        serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-        socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-        bufferMaxEntries: 0, // Disable mongoose buffering
-        bufferCommands: false, // Disable mongoose buffering
-        maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-        family: 4 // Use IPv4, skip trying IPv6
+      const dbConfig = {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        database: process.env.DB_NAME || 'trea_payment_gateway',
+        username: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        dialect: 'mysql',
+        logging: process.env.NODE_ENV === 'development' ? console.log : false,
+        pool: {
+          max: 10,
+          min: 0,
+          acquire: 30000,
+          idle: 10000
+        },
+        define: {
+          timestamps: true,
+          underscored: false,
+          freezeTableName: true
+        },
+        dialectOptions: {
+          charset: 'utf8mb4'
+        }
       };
 
-      // Connect to MongoDB
-      this.connection = await mongoose.connect(mongoURI, options);
+      // Create Sequelize instance
+      this.sequelize = new Sequelize(
+        dbConfig.database,
+        dbConfig.username,
+        dbConfig.password,
+        dbConfig
+      );
+
+      // Test the connection
+      await this.sequelize.authenticate();
       this.isConnected = true;
 
-      logger.info('MongoDB connected successfully', {
-        host: this.connection.connection.host,
-        port: this.connection.connection.port,
-        database: this.connection.connection.name
-      });
-
-      // Connection event listeners
-      mongoose.connection.on('connected', () => {
-        logger.info('Mongoose connected to MongoDB');
-        this.isConnected = true;
-      });
-
-      mongoose.connection.on('error', (err) => {
-        logger.error('Mongoose connection error:', err);
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        logger.warn('Mongoose disconnected from MongoDB');
-        this.isConnected = false;
+      logger.info('MySQL connected successfully', {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        database: dbConfig.database
       });
 
       // Handle application termination
@@ -84,9 +80,9 @@ class Database {
         process.exit(0);
       });
 
-      return this.connection;
+      return this.sequelize;
     } catch (error) {
-      logger.error('MongoDB connection failed:', error);
+      logger.error('MySQL connection failed:', error);
       this.isConnected = false;
       throw error;
     }
@@ -94,38 +90,37 @@ class Database {
 
   async disconnect() {
     try {
-      if (this.connection) {
-        await mongoose.connection.close();
+      if (this.sequelize) {
+        await this.sequelize.close();
         this.isConnected = false;
-        logger.info('MongoDB connection closed');
+        logger.info('MySQL connection closed');
       }
     } catch (error) {
-      logger.error('Error closing MongoDB connection:', error);
+      logger.error('Error closing MySQL connection:', error);
       throw error;
     }
   }
 
   async healthCheck() {
     try {
-      if (!this.isConnected) {
+      if (!this.isConnected || !this.sequelize) {
         return {
           status: 'disconnected',
           message: 'Database is not connected'
         };
       }
 
-      // Ping the database
-      await mongoose.connection.db.admin().ping();
+      // Test the connection
+      await this.sequelize.authenticate();
       
       return {
         status: 'connected',
         message: 'Database is healthy',
         details: {
-          host: mongoose.connection.host,
-          port: mongoose.connection.port,
-          database: mongoose.connection.name,
-          readyState: mongoose.connection.readyState,
-          collections: Object.keys(mongoose.connection.collections).length
+          host: this.sequelize.config.host,
+          port: this.sequelize.config.port,
+          database: this.sequelize.config.database,
+          dialect: this.sequelize.config.dialect
         }
       };
     } catch (error) {
@@ -139,74 +134,22 @@ class Database {
   }
 
   getConnectionStatus() {
-    const states = {
-      0: 'disconnected',
-      1: 'connected',
-      2: 'connecting',
-      3: 'disconnecting'
-    };
-
     return {
       isConnected: this.isConnected,
-      readyState: mongoose.connection.readyState,
-      status: states[mongoose.connection.readyState] || 'unknown',
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      database: mongoose.connection.name
+      host: this.sequelize?.config?.host || 'unknown',
+      port: this.sequelize?.config?.port || 'unknown',
+      database: this.sequelize?.config?.database || 'unknown',
+      dialect: this.sequelize?.config?.dialect || 'unknown'
     };
   }
 
-  async createIndexes() {
+  async sync(options = {}) {
     try {
-      logger.info('Creating database indexes...');
-
-      // User indexes
-      await mongoose.connection.collection('users').createIndex({ email: 1 }, { unique: true });
-      await mongoose.connection.collection('users').createIndex({ phone: 1 }, { unique: true, sparse: true });
-      await mongoose.connection.collection('users').createIndex({ userType: 1 });
-      await mongoose.connection.collection('users').createIndex({ status: 1 });
-      await mongoose.connection.collection('users').createIndex({ 'verification.emailVerified': 1 });
-      await mongoose.connection.collection('users').createIndex({ 'verification.phoneVerified': 1 });
-      await mongoose.connection.collection('users').createIndex({ 'verification.kycStatus': 1 });
-      await mongoose.connection.collection('users').createIndex({ createdAt: 1 });
-
-      // Wallet indexes
-      await mongoose.connection.collection('wallets').createIndex({ walletId: 1 }, { unique: true });
-      await mongoose.connection.collection('wallets').createIndex({ owner: 1 });
-      await mongoose.connection.collection('wallets').createIndex({ type: 1 });
-      await mongoose.connection.collection('wallets').createIndex({ status: 1 });
-      await mongoose.connection.collection('wallets').createIndex({ owner: 1, type: 1 });
-
-      // Transaction indexes
-      await mongoose.connection.collection('transactions').createIndex({ transactionId: 1 }, { unique: true });
-      await mongoose.connection.collection('transactions').createIndex({ 'sender.userId': 1 });
-      await mongoose.connection.collection('transactions').createIndex({ 'receiver.userId': 1 });
-      await mongoose.connection.collection('transactions').createIndex({ status: 1 });
-      await mongoose.connection.collection('transactions').createIndex({ type: 1 });
-      await mongoose.connection.collection('transactions').createIndex({ category: 1 });
-      await mongoose.connection.collection('transactions').createIndex({ createdAt: -1 });
-      await mongoose.connection.collection('transactions').createIndex({ 'amount.currency': 1 });
-      await mongoose.connection.collection('transactions').createIndex({ 
-        'sender.userId': 1, 
-        'receiver.userId': 1, 
-        createdAt: -1 
-      });
-
-      // Compound indexes for common queries
-      await mongoose.connection.collection('transactions').createIndex({
-        status: 1,
-        createdAt: -1
-      });
-
-      await mongoose.connection.collection('transactions').createIndex({
-        type: 1,
-        status: 1,
-        createdAt: -1
-      });
-
-      logger.info('Database indexes created successfully');
+      logger.info('Syncing database models...');
+      await this.sequelize.sync(options);
+      logger.info('Database models synced successfully');
     } catch (error) {
-      logger.error('Error creating database indexes:', error);
+      logger.error('Error syncing database models:', error);
       throw error;
     }
   }
@@ -217,7 +160,7 @@ class Database {
         throw new Error('Database can only be dropped in test environment');
       }
 
-      await mongoose.connection.dropDatabase();
+      await this.sequelize.drop();
       logger.info('Test database dropped successfully');
     } catch (error) {
       logger.error('Error dropping database:', error);
@@ -227,34 +170,46 @@ class Database {
 
   async getStats() {
     try {
-      const stats = await mongoose.connection.db.stats();
-      const collections = await mongoose.connection.db.listCollections().toArray();
-      
-      const collectionStats = {};
-      for (const collection of collections) {
-        const collStats = await mongoose.connection.db.collection(collection.name).stats();
-        collectionStats[collection.name] = {
-          documents: collStats.count,
-          size: collStats.size,
-          avgObjSize: collStats.avgObjSize,
-          indexes: collStats.nindexes
+      const [results] = await this.sequelize.query(`
+        SELECT 
+          table_name,
+          table_rows,
+          data_length,
+          index_length,
+          (data_length + index_length) as total_size
+        FROM information_schema.tables 
+        WHERE table_schema = DATABASE()
+      `);
+
+      const tables = {};
+      let totalRows = 0;
+      let totalSize = 0;
+
+      for (const table of results) {
+        tables[table.table_name] = {
+          rows: table.table_rows,
+          dataSize: table.data_length,
+          indexSize: table.index_length,
+          totalSize: table.total_size
         };
+        totalRows += table.table_rows;
+        totalSize += table.total_size;
       }
 
       return {
-        database: stats.db,
-        collections: stats.collections,
-        documents: stats.objects,
-        dataSize: stats.dataSize,
-        storageSize: stats.storageSize,
-        indexes: stats.indexes,
-        indexSize: stats.indexSize,
-        collectionDetails: collectionStats
+        tables,
+        totalRows,
+        totalSize,
+        database: this.sequelize.config.database
       };
     } catch (error) {
       logger.error('Error getting database stats:', error);
       throw error;
     }
+  }
+
+  getSequelize() {
+    return this.sequelize;
   }
 }
 
