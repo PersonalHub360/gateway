@@ -13,6 +13,8 @@ const authRoutes = require('./routes/auth');
 const walletRoutes = require('./routes/wallet');
 const transactionRoutes = require('./routes/transaction');
 const paymentRoutes = require('./routes/payment');
+const cashinRoutes = require('./routes/cashin');
+const reportsRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/user');
 
@@ -55,6 +57,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/cashin', cashinRoutes);
+app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 
