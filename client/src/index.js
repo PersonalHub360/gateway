@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query/devtools';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -11,8 +10,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 
 import App from './App';
-import { store, persistor } from './store/store';
-import LoadingSpinner from './components/common/LoadingSpinner';
+import store from './store/store';
 import './index.css';
 
 // Create React Query client
@@ -45,25 +43,33 @@ const theme = createTheme({
       default: '#f5f5f5',
       paper: '#ffffff',
     },
+    text: {
+      primary: 'rgba(0, 0, 0, 0.87)',
+      secondary: 'rgba(0, 0, 0, 0.6)',
+    },
     success: {
       main: '#4caf50',
       light: '#81c784',
       dark: '#388e3c',
+      contrastText: '#ffffff',
     },
     warning: {
       main: '#ff9800',
       light: '#ffb74d',
       dark: '#f57c00',
+      contrastText: '#ffffff',
     },
     error: {
       main: '#f44336',
       light: '#e57373',
       dark: '#d32f2f',
+      contrastText: '#ffffff',
     },
     info: {
       main: '#2196f3',
       light: '#64b5f6',
       dark: '#1976d2',
+      contrastText: '#ffffff',
     },
   },
   typography: {
@@ -171,41 +177,44 @@ root.render(
   <React.StrictMode>
     <HelmetProvider>
       <Provider store={store}>
-        <PersistGate loading={<LoadingSpinner />} persistor={persistor}>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider theme={theme}>
-              <CssBaseline />
-              <BrowserRouter>
-                <App />
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    duration: 4000,
-                    style: {
-                      background: '#363636',
-                      color: '#fff',
-                      borderRadius: '8px',
-                      fontSize: '14px',
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <App />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                  },
+                  success: {
+                    iconTheme: {
+                      primary: '#4caf50',
+                      secondary: '#fff',
                     },
-                    success: {
-                      iconTheme: {
-                        primary: '#4caf50',
-                        secondary: '#fff',
-                      },
+                  },
+                  error: {
+                    iconTheme: {
+                      primary: '#f44336',
+                      secondary: '#fff',
                     },
-                    error: {
-                      iconTheme: {
-                        primary: '#f44336',
-                        secondary: '#fff',
-                      },
-                    },
-                  }}
-                />
-              </BrowserRouter>
-            </ThemeProvider>
-            <ReactQueryDevtools initialIsOpen={false} />
-          </QueryClientProvider>
-        </PersistGate>
+                  },
+                }}
+              />
+            </BrowserRouter>
+          </ThemeProvider>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
       </Provider>
     </HelmetProvider>
   </React.StrictMode>

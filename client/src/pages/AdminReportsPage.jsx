@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Container, Typography, Paper, Alert } from '@mui/material';
 import { useSelector } from 'react-redux';
-import AdminReports from '../components/Admin/AdminReports';
+import AdminReports from '../components/admin/AdminReports';
 import { Assessment as ReportIcon } from '@mui/icons-material';
 
 const AdminReportsPage = () => {

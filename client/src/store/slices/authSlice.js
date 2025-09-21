@@ -154,7 +154,55 @@ export const refreshToken = createAsyncThunk(
       return response.data;
     } catch (error) {
       localStorage.removeItem('token');
-      return rejectWithValue('Token refresh failed');
+      return rejectWithValue(error.response?.data?.message || 'Token refresh failed');
+    }
+  }
+);
+
+export const sendPhoneVerification = createAsyncThunk(
+  'auth/sendPhoneVerification',
+  async (phoneNumber, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.sendPhoneVerification(phoneNumber);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to send phone verification');
+    }
+  }
+);
+
+export const resendEmailVerification = createAsyncThunk(
+  'auth/resendEmailVerification',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.resendEmailVerification();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to resend verification email');
+    }
+  }
+);
+
+export const disable2FA = createAsyncThunk(
+  'auth/disable2FA',
+  async (password, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.disable2FA(password);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to disable 2FA');
+    }
+  }
+);
+
+export const fetchUserProfile = createAsyncThunk(
+  'auth/fetchUserProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.getProfile();
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch user profile');
     }
   }
 );
@@ -392,6 +440,71 @@ const authSlice = createSlice({
         state.isEmailVerified = false;
         state.isPhoneVerified = false;
         state.is2FAEnabled = false;
+      })
+
+      // Fetch User Profile
+      .addCase(fetchUserProfile.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.isEmailVerified = action.payload.isEmailVerified;
+        state.isPhoneVerified = action.payload.isPhoneVerified;
+        state.is2FAEnabled = action.payload.is2FAEnabled;
+      })
+      .addCase(fetchUserProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Disable 2FA
+      .addCase(disable2FA.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(disable2FA.fulfilled, (state) => {
+        state.isLoading = false;
+        state.is2FAEnabled = false;
+        if (state.user) {
+          state.user.is2FAEnabled = false;
+        }
+        toast.success('2FA disabled successfully');
+      })
+      .addCase(disable2FA.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        toast.error(action.payload);
+      })
+
+      // Resend Email Verification
+      .addCase(resendEmailVerification.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resendEmailVerification.fulfilled, (state) => {
+        state.isLoading = false;
+        toast.success('Verification email sent successfully');
+      })
+      .addCase(resendEmailVerification.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        toast.error(action.payload);
+      })
+
+      // Send Phone Verification
+      .addCase(sendPhoneVerification.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(sendPhoneVerification.fulfilled, (state) => {
+        state.isLoading = false;
+        toast.success('Phone verification code sent successfully');
+      })
+      .addCase(sendPhoneVerification.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        toast.error(action.payload);
       });
   },
 });

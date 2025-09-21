@@ -1,76 +1,67 @@
 @echo off
-echo Installing Trea Gateway Dependencies...
+echo ========================================
+echo  Trea Payment Gateway - Dependency Installer
+echo ========================================
 echo.
 
 echo Checking Node.js installation...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERROR: Node.js is not installed or not in PATH
+    echo ERROR: Node.js is not installed!
     echo Please install Node.js from https://nodejs.org/
-    pause
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
-echo Node.js is installed
-node --version
-echo.
-
-echo Checking npm installation...
-npm --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: npm is not installed or not in PATH
-    pause
-    exit /b 1
-)
-
-echo npm is installed
-npm --version
+echo Node.js is installed. Proceeding with dependency installation...
 echo.
 
 echo Installing backend dependencies...
-echo Current directory: %cd%
 npm install
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to install backend dependencies
-    pause
+    echo ERROR: Failed to install backend dependencies!
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
-echo Backend dependencies installed successfully!
 echo.
-
 echo Installing frontend dependencies...
 cd client
-if %errorlevel% neq 0 (
-    echo ERROR: Could not navigate to client directory
-    pause
-    exit /b 1
-)
 
-echo Current directory: %cd%
+echo Cleaning previous installation...
+if exist "node_modules" rmdir /s /q node_modules
+if exist "package-lock.json" del package-lock.json
+if exist "yarn.lock" del yarn.lock
+
 npm install
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to install frontend dependencies
-    cd ..
-    pause
+    echo ERROR: Failed to install frontend dependencies!
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
-echo Frontend dependencies installed successfully!
-echo.
-
 cd ..
-echo Returning to root directory: %cd%
-echo.
 
+echo.
+echo Creating uploads directory...
+if not exist "uploads" mkdir uploads
+
+echo.
 echo ========================================
-echo All dependencies installed successfully!
+echo  Installation completed successfully!
 echo ========================================
 echo.
-echo Next steps:
-echo 1. Make sure MongoDB is running
-echo 2. Configure your .env file (already created)
-echo 3. Run 'npm run dev' to start both servers
-echo 4. Or run 'npm start' for backend and 'npm run client' for frontend separately
+echo To start the application:
+echo 1. Run start-servers.bat
+echo 2. Or manually start:
+echo    - Backend: npm run dev
+echo    - Frontend: cd client && npm start
 echo.
-pause
+echo Frontend will be available at: http://localhost:3000
+echo Backend API will be available at: http://localhost:5000
+echo.
+echo Press any key to exit...
+pause >nul

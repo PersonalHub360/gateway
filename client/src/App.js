@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { checkAuthStatus } from './store/slices/authSlice';
 
 // Components
-import Layout from './components/layout/Layout';
+import Layout from './components/common/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
@@ -65,7 +65,7 @@ function App() {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}
       >
-        <LoadingSpinner size={60} color="white" />
+        <LoadingSpinner size={60} color="inherit" />
       </Box>
     );
   }

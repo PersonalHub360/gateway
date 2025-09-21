@@ -1,58 +1,72 @@
 @echo off
-echo Starting Trea Gateway Servers...
+echo ========================================
+echo  Trea Payment Gateway - Server Starter
+echo ========================================
 echo.
 
-echo Checking if dependencies are installed...
-if not exist "node_modules" (
-    echo Backend dependencies not found. Installing...
-    call install-dependencies.bat
-    if %errorlevel% neq 0 (
-        echo Failed to install dependencies
-        pause
-        exit /b 1
-    )
-)
-
-if not exist "client\node_modules" (
-    echo Frontend dependencies not found. Installing...
-    call install-dependencies.bat
-    if %errorlevel% neq 0 (
-        echo Failed to install dependencies
-        pause
-        exit /b 1
-    )
-)
-
-echo Dependencies are installed.
-echo.
-
-echo Checking .env file...
-if not exist ".env" (
-    echo .env file not found. Please create one based on .env.example
-    pause
+echo Checking Node.js installation...
+node --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Node.js is not installed!
+    echo Please install Node.js from https://nodejs.org/
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
-echo .env file found.
+echo Checking if dependencies are installed...
+if not exist "node_modules" (
+    echo ERROR: Backend dependencies not found!
+    echo Please run install-dependencies.bat first
+    echo Press any key to exit...
+    pause >nul
+    exit /b 1
+)
+
+if not exist "client\node_modules" (
+    echo ERROR: Frontend dependencies not found!
+    echo Please run install-dependencies.bat first
+    echo Press any key to exit...
+    pause >nul
+    exit /b 1
+)
+
+echo.
+echo Starting Trea Payment Gateway servers...
+echo.
+echo Backend will start on: http://localhost:5000
+echo Frontend will start on: http://localhost:3000
+echo.
+echo Press Ctrl+C to stop both servers
 echo.
 
-echo Starting servers...
-echo Backend will run on: http://localhost:5000
-echo Frontend will run on: http://localhost:3000
-echo.
-echo Press Ctrl+C to stop the servers
-echo.
+echo Starting backend server...
+start "Trea Backend Server" cmd /k "npm run dev"
 
-start "Trea Gateway Backend" cmd /k "echo Starting Backend Server... && npm start"
+echo Waiting for backend to initialize...
 timeout /t 3 /nobreak >nul
-start "Trea Gateway Frontend" cmd /k "echo Starting Frontend Server... && npm run client"
+
+echo Starting frontend server...
+start "Trea Frontend Server" cmd /k "cd client && npm start"
 
 echo.
-echo Servers are starting...
-echo Check the opened terminal windows for server status
+echo ========================================
+echo  Both servers are starting...
+echo ========================================
 echo.
-echo Backend API: http://localhost:5000/api
-echo Frontend App: http://localhost:3000
-echo Admin Panel: http://localhost:3000/admin
+echo Backend: http://localhost:5000
+echo Frontend: http://localhost:3000
+echo API Health: http://localhost:5000/api/health
 echo.
-pause
+echo Default Admin Login:
+echo Email: admin@treapayment.com
+echo Password: admin123456
+echo.
+echo Close this window or press Ctrl+C to stop monitoring
+echo The servers will continue running in separate windows
+echo.
+
+:monitor
+timeout /t 5 /nobreak >nul
+echo Servers are running... (Press Ctrl+C to exit)
+goto monitor

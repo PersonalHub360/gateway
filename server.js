@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const logger = require('./config/logger');
 require('dotenv').config();
 
 const app = express();
@@ -32,8 +33,8 @@ app.use(limiter);
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000'],
+    ? ['https://yourdomain.com']
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3005', 'http://localhost:3006', 'http://localhost:3007'],
   credentials: true
 }));
 
@@ -44,13 +45,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea_payment_gateway', {
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trea-payment-gateway', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => {
+  console.log('Connected to MongoDB');
+  logger.info('MongoDB connection established');
+})
+.catch((error) => {
+  console.error('MongoDB connection error:', error.message);
+  console.log('Server will continue without MongoDB connection for development');
+  logger.error('MongoDB connection failed', { error: error.message });
+  // Continue without MongoDB for development - don't exit
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
