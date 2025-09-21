@@ -49,7 +49,10 @@ export const store = configureStore({
 export const persistor = persistStore(store);
 
 // Export types for TypeScript (if needed)
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+// For JavaScript, we can export the store's state type if needed
+export const getRootState = () => store.getState();
+// AppDispatch type is only available when using TypeScript
+// For JavaScript, we can export the store.dispatch directly if needed
+export const dispatch = store.dispatch;
 
 export default store;

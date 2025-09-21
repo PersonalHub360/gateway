@@ -48,6 +48,189 @@ router.get('/dashboard', [
 
     // Transaction statistics
     const totalTransactions = await Transaction.countDocuments();
+
+    // Cash In Statistics
+    const totalCashIn = await Transaction.aggregate([
+      { $match: { type: 'cashin', status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    const dailyCashIn = await Transaction.aggregate([
+      { $match: { type: 'cashin', status: 'completed', createdAt: { $gte: startOfDay } } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    // Cash Out Statistics
+    const totalCashOut = await Transaction.aggregate([
+      { $match: { type: 'cashout', status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    const dailyCashOut = await Transaction.aggregate([
+      { $match: { type: 'cashout', status: 'completed', createdAt: { $gte: startOfDay } } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    // Withdrawal Statistics
+    const totalWithdrawals = await Transaction.aggregate([
+      { $match: { type: 'withdrawal', status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    const dailyWithdrawals = await Transaction.aggregate([
+      { $match: { type: 'withdrawal', status: 'completed', createdAt: { $gte: startOfDay } } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    // Commission Statistics
+    const totalCommission = await Transaction.aggregate([
+      { $match: { status: 'completed', 'metadata.commission': { $exists: true } } },
+      { $group: { _id: null, total: { $sum: '$metadata.commission' } } }
+    ]);
+
+    const dailyCommission = await Transaction.aggregate([
+      { $match: { 
+        status: 'completed', 
+        'metadata.commission': { $exists: true },
+        createdAt: { $gte: startOfDay }
+      }},
+      { $group: { _id: null, total: { $sum: '$metadata.commission' } } }
+    ]);
+
+    // Loss Statistics (failed transactions, chargebacks, etc.)
+    const totalLosses = await Transaction.aggregate([
+      { $match: { 
+        $or: [
+          { status: 'failed', 'metadata.loss': { $exists: true } },
+          { status: 'chargeback' },
+          { status: 'disputed' }
+        ]
+      }},
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$metadata.loss', '$amount'] } } } }
+    ]);
+
+    // Payment Method Breakdown for Cash-in
+    const cashinByMethod = await Transaction.aggregate([
+      { $match: { type: 'cashin', status: 'completed' } },
+      { $group: { 
+        _id: '$paymentMethod', 
+        total: { $sum: '$amount' }, 
+        count: { $sum: 1 } 
+      }},
+      { $sort: { total: -1 } }
+    ]);
+
+    // Cash-in by Type (merchant, agent, personal, bank)
+    const cashinByType = await Transaction.aggregate([
+      { $match: { type: 'cashin', status: 'completed' } },
+      { $group: { 
+        _id: '$subType', 
+        total: { $sum: '$amount' }, 
+        count: { $sum: 1 } 
+      }},
+      { $sort: { total: -1 } }
+    ]);
+
+    // Monthly trends for the last 12 months
+    const monthlyTrends = await Transaction.aggregate([
+      { $match: { 
+        status: 'completed',
+        createdAt: { $gte: new Date(today.getFullYear() - 1, today.getMonth(), 1) }
+      }},
+      { $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          type: '$type'
+        },
+        total: { $sum: '$amount' },
+        count: { $sum: 1 }
+      }},
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Pending transactions requiring attention
+    const pendingTransactions = await Transaction.countDocuments({
+      status: { $in: ['pending_verification', 'pending_approval'] }
+    });
+
+    // System health metrics
+    const systemHealth = {
+      totalWallets: await Wallet.countDocuments(),
+      activeWallets: await Wallet.countDocuments({ status: 'active' }),
+      frozenWallets: await Wallet.countDocuments({ status: 'frozen' }),
+      totalBalance: await Wallet.aggregate([
+        { $group: { _id: null, total: { $sum: '$balance' } } }
+      ])
+    };
+
+    res.json({
+      success: true,
+      data: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          newToday: newUsersToday,
+          newThisMonth: newUsersThisMonth,
+          breakdown: userTypes
+        },
+        transactions: {
+          total: totalTransactions,
+          pending: pendingTransactions
+        },
+        cashIn: {
+          total: {
+            amount: totalCashIn[0]?.total || 0,
+            count: totalCashIn[0]?.count || 0
+          },
+          daily: {
+            amount: dailyCashIn[0]?.total || 0,
+            count: dailyCashIn[0]?.count || 0
+          },
+          byMethod: cashinByMethod,
+          byType: cashinByType
+        },
+        cashOut: {
+          total: {
+            amount: totalCashOut[0]?.total || 0,
+            count: totalCashOut[0]?.count || 0
+          },
+          daily: {
+            amount: dailyCashOut[0]?.total || 0,
+            count: dailyCashOut[0]?.count || 0
+          }
+        },
+        withdrawals: {
+          total: {
+            amount: totalWithdrawals[0]?.total || 0,
+            count: totalWithdrawals[0]?.count || 0
+          },
+          daily: {
+            amount: dailyWithdrawals[0]?.total || 0,
+            count: dailyWithdrawals[0]?.count || 0
+          }
+        },
+        commission: {
+          total: totalCommission[0]?.total || 0,
+          daily: dailyCommission[0]?.total || 0
+        },
+        losses: {
+          total: totalLosses[0]?.total || 0
+        },
+        trends: {
+          monthly: monthlyTrends
+        },
+        systemHealth
+      }
+    });
+  } catch (error) {
+    console.error('Admin dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard data'
+    });
+  }
+});
     const transactionsToday = await Transaction.countDocuments({
       createdAt: { $gte: startOfDay }
     });
