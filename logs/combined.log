@@ -153,3 +153,7 @@
 {"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 18:57:21"}
 {"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 18:58:07"}
 {"environment":"development","level":"info","message":"Application shutting down...","service":"trea-payment-gateway","timestamp":"2025-09-21 18:59:29"}
+{"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 19:02:28"}
+{"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 19:10:09"}
+{"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 19:11:28"}
+{"environment":"development","level":"info","message":"MongoDB connection established","service":"trea-payment-gateway","timestamp":"2025-09-21 19:54:08"}
