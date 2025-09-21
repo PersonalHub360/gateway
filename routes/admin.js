@@ -231,6 +231,123 @@ router.get('/dashboard', [
     });
   }
 });
+    const dailyTransactions = await Transaction.countDocuments({
+      createdAt: { $gte: startOfDay }
+    });
+    const monthlyTransactions = await Transaction.countDocuments({
+      createdAt: { $gte: startOfMonth }
+    });
+
+    // Transaction status breakdown
+    const transactionStatusBreakdown = await Transaction.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    // Transaction volume by currency
+    const monthlyTransactionVolume = await Transaction.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: { $gte: startOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: '$amount.currency',
+          totalAmount: { $sum: '$amount.value' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Wallet statistics
+const walletCount = await Wallet.countDocuments();
+const activeWalletCount = await Wallet.countDocuments({ status: 'active' });
+
+    // Top transactions today
+    const topTransactionsToday = await Transaction.find({
+      createdAt: { $gte: startOfDay }
+    })
+    .sort({ 'amount.value': -1 })
+    .limit(10)
+    .populate('sender.userId receiver.userId', 'fullName email');
+
+    // Pending approvals
+    const pendingTxns = await Transaction.countDocuments({
+      status: 'pending'
+    });
+
+    const pendingKYCCount = await User.countDocuments({
+      'verification.kycStatus': 'pending'
+    });
+
+    res.json({
+      success: true,
+      dashboard: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          newToday: newUsersToday,
+          newThisMonth: newUsersThisMonth,
+          typeBreakdown: userTypes
+        },
+        transactions: {
+          total: totalTransactions,
+          today: transactionsToday,
+          thisMonth: transactionsThisMonth,
+          statusBreakdown: transactionStatus,
+          volumeByCurrency: transactionVolume.map(v => ({
+            currency: v._id,
+            totalAmount: formatCurrency(v.totalAmount, v._id),
+            count: v.count
+          }))
+        },
+        wallets: {
+          total: totalWallets,
+          active: activeWallets
+        },
+        pending: {
+          transactions: pendingTransactions,
+          kyc: pendingKYC
+        },
+        topTransactions: topTransactions.map(tx => ({
+          id: tx._id,
+          transactionId: tx.transactionId,
+          type: tx.type,
+          amount: formatCurrency(tx.amount.value, tx.amount.currency),
+          sender: tx.sender.userId ? tx.sender.userId.fullName : 'External',
+          receiver: tx.receiver.userId ? tx.receiver.userId.fullName : 'External',
+          status: tx.status,
+          createdAt: tx.createdAt
+        }))
+      }
+    });
+try {
+} catch (error) {
+  // Handle any errors that occur during dashboard data fetching
+  console.error('Admin dashboard error:', error);
+  res.status(500).json({
+    success: false,
+    message: 'Failed to fetch dashboard data'
+  });
+  // Handle any errors that occur during dashboard data fetching
+  console.error('Admin dashboard error:', error);
+  res.status(500).json({
+    success: false,
+    message: 'Failed to fetch dashboard data'
+  });
+
+
+  // Handle any errors that occur during dashboard data fetching
+    console.error('Admin dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard data'
+    });
+  }
+}); // End of dashboard route
+
+
     const transactionsToday = await Transaction.countDocuments({
       createdAt: { $gte: startOfDay }
     });
@@ -322,7 +439,14 @@ router.get('/dashboard', [
         }))
       }
     });
-  } catch (error) {
+} catch (error) {
+  // Handle any errors that occur during dashboard data fetching
+  console.error('Admin dashboard error:', error);
+  res.status(500).json({
+    success: false,
+    error: 'Failed to fetch dashboard data'
+  });
+  // Handle any errors that occur during dashboard data fetching
     console.error('Admin dashboard error:', error);
     res.status(500).json({
       success: false,
